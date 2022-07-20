@@ -1,0 +1,20 @@
+#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
+
+FROM [LoclaRepoIP]:8082/sdk:5.0-buster-slim AS base
+WORKDIR /app
+EXPOSE 80
+
+ENV DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0
+ENV NUGET_CREDENTIALPROVIDER_SESSIONTOKENCACHE_ENABLED true
+ENV VSS_NUGET_EXTERNAL_FEED_ENDPOINTS {\"endpointCredentials\": [{\"endpoint\":\"http://[LoclaRepoIP]:8081/repository/group-nuget/index.json\", \"username\":\"software\", \"password\":\"Aa123456!\"}]}
+
+COPY *.csproj ./
+RUN dotnet restore "/app/MyApp.csproj" -s "http://[LoclaRepoIP]:8081/repository/group-nuget/index.json"
+
+COPY . ./
+
+RUN dotnet publish -c Release -o out
+FROM [LoclaRepoIP]:8082/aspnet:5.0-buster-slim AS final
+WORKDIR /app
+COPY --from=base /app/out .
+ENTRYPOINT ["dotnet", "TaxAffairsMicroService.dll"]
